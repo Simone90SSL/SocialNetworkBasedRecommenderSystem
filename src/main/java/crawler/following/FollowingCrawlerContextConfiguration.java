@@ -1,4 +1,4 @@
-package crawler;
+package crawler.following;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @PropertySource(value = "classpath:application.properties")
-public class CrawlerContextConfiguarion {
+public class FollowingCrawlerContextConfiguration {
 
     @Value("${consumerKey}")
     private String consumerKey;

@@ -1,19 +1,19 @@
 package controller;
 
-import crawler.CrawlerContextConfiguarion;
+import crawler.following.FollowingCrawlerContextConfiguration;
 import crawler.TwitterCralwerFactory;
-import crawler.TwitterCrawler;
-import crawler.user.frontier.producer.UserFrontierProducer;
+import crawler.following.TwitterFollowingCrawler;
+import crawler.following.frontier.producer.FollowingFrontierProducer;
 import domain.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import repository.postgresql.CrawledUserRepository;
+import repository.neo4j.UserRepository;
 import twitter4j.TwitterException;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
@@ -25,10 +25,16 @@ import static org.springframework.web.bind.annotation.RequestMethod.GET;
 public class UserController {
 
     @Autowired
-    private CrawlerContextConfiguarion conf;
+    private FollowingCrawlerContextConfiguration followingCrawlerContextConfiguration;
 
     @Autowired
-    private UserFrontierProducer userFrontierProducer;
+    private FollowingFrontierProducer followingFrontierProducer;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private CrawledUserRepository crawledUserRepository;
 
     @RequestMapping(produces = MediaType.APPLICATION_JSON_UTF8_VALUE, value = "/users", method = GET)
     public List<User> getUsers(){
@@ -43,8 +49,12 @@ public class UserController {
     @RequestMapping(produces = MediaType.APPLICATION_JSON_UTF8_VALUE, value = "/followed", method = GET)
     public List<User> getFollowed(){
         try {
-            TwitterCrawler tc =TwitterCralwerFactory.getTwitterCrawler(conf, userFrontierProducer);
-            return tc.getFollowed(-1);
+            TwitterFollowingCrawler tc =TwitterCralwerFactory.getTwitterCrawler(
+                    followingCrawlerContextConfiguration,
+                    followingFrontierProducer,
+                    userRepository,
+                    crawledUserRepository);
+            tc.crawlFollowedByTwitterUserId(-1L);
         } catch (TwitterException e) {
             e.printStackTrace();
         }

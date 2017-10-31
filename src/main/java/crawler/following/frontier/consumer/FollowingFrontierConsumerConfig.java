@@ -1,4 +1,4 @@
-package crawler.user.frontier.consumer;
+package crawler.following.frontier.consumer;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -17,7 +17,7 @@ import java.util.Map;
 
 @Configuration
 @EnableKafka
-public class UserFrontierConsumerConfig {
+public class FollowingFrontierConsumerConfig {
 
     @Value("${kafka.bootstrap-servers}")
     private String bootstrapServers;
@@ -30,7 +30,7 @@ public class UserFrontierConsumerConfig {
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         // allows a pool of processes to divide the work of consuming and processing records
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "userfrontiergroup");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "followingfrontiergroup");
 
         return props;
     }
@@ -50,7 +50,7 @@ public class UserFrontierConsumerConfig {
     }
 
     @Bean
-    public UserFrontierConsumer receiver() {
-        return new UserFrontierConsumer();
+    public FollowingFrontierConsumer receiver() {
+        return new FollowingFrontierConsumer();
     }
 }

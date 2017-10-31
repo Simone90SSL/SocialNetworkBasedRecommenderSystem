@@ -1,4 +1,4 @@
-package crawler.user.frontier.producer;
+package crawler.following.frontier.producer;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -13,7 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
-public class UserFrontierProducerConfig {
+public class FollowingFrontierProducerConfig {
 
     @Value("${kafka.bootstrap-servers}")
     private String bootstrapServers;
@@ -40,7 +40,7 @@ public class UserFrontierProducerConfig {
     }
 
     @Bean
-    public UserFrontierProducer sender() {
-        return new UserFrontierProducer();
+    public FollowingFrontierProducer sender() {
+        return new FollowingFrontierProducer();
     }
 }

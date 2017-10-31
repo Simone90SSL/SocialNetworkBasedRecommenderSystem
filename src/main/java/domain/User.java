@@ -1,6 +1,18 @@
 package domain;
 
+import org.neo4j.ogm.annotation.GraphId;
+import org.neo4j.ogm.annotation.NodeEntity;
+import org.neo4j.ogm.annotation.Relationship;
+
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
+@NodeEntity
 public class User {
+
+    @GraphId
+    private Long id;
 
     private long twitterId;
     private String name;
@@ -8,6 +20,12 @@ public class User {
     private String location;
     private String url;
 
+    @Relationship(type = "FOLLOW")
+    public Set<User> follows;
+
+    private User() {
+        // Empty constructor required as of Neo4j API 2.0.5
+    };
 
     public User(long twitterId, String name, String nickname, String location, String url) {
         this.twitterId = twitterId;
@@ -15,6 +33,18 @@ public class User {
         this.nickname = nickname;
         this.location = location;
         this.url = url;
+    }
+
+    public User(long twitterId) {
+        this.twitterId = twitterId;
+        this.name = "";
+        this.nickname = "";
+        this.location = "";
+        this.url = "";
+    }
+
+    public Long getId(){
+        return id;
     }
 
     public long getTwitterId() {
@@ -55,6 +85,17 @@ public class User {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public void setId(Long id){
+        this.id = id;
+    }
+
+    public void follow(User user) {
+        if (follows == null) {
+            follows = new HashSet<>();
+        }
+        follows.add(user);
     }
 
     @Override

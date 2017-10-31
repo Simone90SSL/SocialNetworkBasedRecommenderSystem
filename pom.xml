@@ -28,7 +28,7 @@
             <artifactId>spring-boot-autoconfigure</artifactId>
             <version>1.5.7.RELEASE</version>
         </dependency>
-        <!-- JPA and POSTGRES
+        <!-- JPA and POSTGRES -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -49,8 +49,8 @@
             <artifactId>openjpa-all</artifactId>
             <version>2.3.0</version>
         </dependency>
-        -->
-        <!-- JMS -->
+        <!-- End JPA & Postgresql -->
+        <!-- JMS
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-activemq</artifactId>
@@ -63,6 +63,7 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+        -->
         <!-- Twitter API -->
         <dependency>
             <groupId>org.twitter4j</groupId>
@@ -77,6 +78,12 @@
             <version>${spring-kafka.version}</version>
         </dependency>
         <!-- End KAFKA -->
+        <!-- NEO4J -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-neo4j</artifactId>
+        </dependency>
+        <!-- End NEO4J -->
     </dependencies>
 
     <properties>
