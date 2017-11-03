@@ -1,10 +1,10 @@
-package crawler.following.frontier.consumer;
+package crawler.user.frontier.consumer;
 
 import crawler.Crawler;
-import crawler.following.FollowingCrawlerContextConfiguration;
 import crawler.TwitterCralwerFactory;
-import crawler.following.TwitterFollowingCrawler;
 import crawler.following.frontier.producer.FollowingFrontierProducer;
+import crawler.user.frontier.UserCrawlerContextConfiguration;
+import crawler.user.frontier.TwitterUserCrawler;
 import crawler.user.frontier.producer.UserFrontierProducer;
 import domain.CrawledUser;
 import org.slf4j.Logger;
@@ -13,32 +13,37 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import repository.postgresql.CrawledUserRepository;
-import transaction.following.producer.FollowingTransactionProducer;
+import transaction.user.producer.UserTransactionProducer;
 import twitter4j.TwitterException;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 @Component
-public class FollowingFrontierConsumer {
+public class UserFrontierConsumer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FollowingFrontierConsumer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserFrontierConsumer.class);
 
     @Autowired
-    private FollowingCrawlerContextConfiguration followingCrawlerContextConfiguration;
+    private UserCrawlerContextConfiguration userCrawlerContextConfiguration;
 
     @Autowired
     private UserFrontierProducer userFrontierProducer;
+    @Autowired
+    private FollowingFrontierProducer followingFrontierProducer;
 
     @Autowired
     private CrawledUserRepository crawledUserRepository;
 
     @Autowired
-    private FollowingTransactionProducer followingTransactionProducer;
+    private UserTransactionProducer userTransactionProducer;
 
-    @KafkaListener(topics = "${kafka.topic.followingfrontier}")
+    @KafkaListener(topics = "${kafka.topic.userfrontier}")
     public void receive(String TwitterId) {
         LOGGER.info("Getting twitter user from the frontier with twitter-id='{}'", TwitterId);
+
+        // Trigger FOLLOWING crawling
+        followingFrontierProducer.send(TwitterId);
 
         // Check that twitter user is not present, or it has been crawled at least 24h ago
         CrawledUser crawledUser = crawledUserRepository.findOne(Long.parseLong(TwitterId));
@@ -48,32 +53,33 @@ public class FollowingFrontierConsumer {
             LOGGER.info("User with twitter-id='{}' has never been crawled --> must be created", TwitterId);
             crawledUser = new CrawledUser();
             crawledUser.setTwitterID(Long.parseLong(TwitterId));
-        } else if (crawledUser.getLastFollowingCrawl() != null){
+        } else if (crawledUser.getLastUserCrawl() != null){
             // User is in the DB --> check if it must be crawled
-            long diff = (new Date()).getTime() - crawledUser.getLastFollowingCrawl().getTime();
+            long diff = (new Date()).getTime() - crawledUser.getLastUserCrawl().getTime();
+
             if (TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS) <= 7){
-                LOGGER.info("followinf of twitter-id='{}' has recently been crawled --> SKIP IT", TwitterId);
+                LOGGER.info("user of twitter-id='{}' has recently been crawled --> SKIP IT", TwitterId);
                 return;
             }
 
-            if(crawledUser.getFollowingcrawlstatus() != Crawler.SYNC_TERMINATED){
+            if(crawledUser.getUsercrawlstatus() != Crawler.SYNC_TERMINATED){
                 LOGGER.info("User with twitter-id='{}' is in a state that cannot be crawled --> exit", TwitterId);
                 return;
             }
         }
 
-        crawledUser.setFollowingcrawlstatus(Crawler.CRAWLING_WAITING);
+        crawledUser.setUsercrawlstatus(Crawler.CRAWLING_WAITING);
         crawledUserRepository.save(crawledUser);
 
         // User must be crawled
         LOGGER.info("User with twitter-id='{}' will be crawled", TwitterId);
         try {
-            TwitterFollowingCrawler twitterFollowingCrawler = TwitterCralwerFactory.getTwitterFollowingCrawler(
-                    followingCrawlerContextConfiguration,
+            TwitterUserCrawler twitterUserCrawler = TwitterCralwerFactory.getTwitterUserCrawler(
+                    userCrawlerContextConfiguration,
                     userFrontierProducer,
                     crawledUserRepository,
-                    followingTransactionProducer);
-            twitterFollowingCrawler.crawlFollowedByTwitterUserId(Long.parseLong(TwitterId));
+                    userTransactionProducer);
+            twitterUserCrawler.crawlUserByTwitterUserId(Long.parseLong(TwitterId));
         } catch (TwitterException te){
             te.printStackTrace();
         }

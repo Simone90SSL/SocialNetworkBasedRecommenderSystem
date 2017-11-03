@@ -23,8 +23,18 @@ public class CrawledUser {
     @Column(name = "lasttweetscrawl")
     private Date lastTweetsCrawl;
 
-    @Column(name = "status")
-    private int status;
+    @Column(name = "followingcrawlstatus")
+    private int followingcrawlstatus;
+
+    @Column(name = "followingcrawled")
+    private String followingcrawled;
+
+    @Column(name = "usercrawlstatus")
+    private int usercrawlstatus;
+
+    @Column(name = "usercrawled")
+    private String usercrawled;
+
 
     public CrawledUser(){}
 
@@ -44,8 +54,29 @@ public class CrawledUser {
         return lastTweetsCrawl;
     }
 
-    public int getStatus() {
-        return status;
+
+    public int getFollowingcrawlstatus() {
+        return followingcrawlstatus;
+    }
+
+    public String getFollowingcrawled() {
+        return followingcrawled;
+    }
+
+    public int getUsercrawlstatus() {
+        return usercrawlstatus;
+    }
+
+    public String getUsercrawled() {
+        return usercrawled;
+    }
+
+    public void setFollowingcrawlstatus(int followingcrawlstatus) {
+        this.followingcrawlstatus = followingcrawlstatus;
+    }
+
+    public void setFollowingcrawled(String followingcrawled) {
+        this.followingcrawled = followingcrawled;
     }
 
     public void setTwitterID(long twitterID) {
@@ -64,8 +95,12 @@ public class CrawledUser {
         this.lastTweetsCrawl = lastTweetsCrawl;
     }
 
-    public void setStatus(int status) {
-        this.status = status;
+    public void setUsercrawlstatus(int usercrawlstatus) {
+        this.usercrawlstatus = usercrawlstatus;
+    }
+
+    public void setUsercrawled(String usercrawled) {
+        this.usercrawled = usercrawled;
     }
 }
 

@@ -1,11 +1,13 @@
 package crawler.following;
 
+import crawler.Crawler;
 import crawler.following.frontier.consumer.FollowingFrontierConsumer;
 import crawler.following.frontier.producer.FollowingFrontierProducer;
+import crawler.user.frontier.producer.UserFrontierProducer;
 import domain.CrawledUser;
 import org.slf4j.LoggerFactory;
 import repository.postgresql.CrawledUserRepository;
-import repository.neo4j.UserRepository;
+import transaction.following.producer.FollowingTransactionProducer;
 import twitter4j.Twitter;
 import twitter4j.IDs;
 import twitter4j.User;
@@ -19,21 +21,21 @@ public class TwitterFollowingCrawler {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(FollowingFrontierConsumer.class);
 
-    private FollowingFrontierProducer followingFrontierProducer;
+    private UserFrontierProducer userFrontierProducer;
     private CrawledUserRepository crawledUserRepository;
-    private UserRepository userRepository;
+    private FollowingTransactionProducer followingTransactionProducer;
     private Twitter twitter;
 
 
     public TwitterFollowingCrawler(
             FollowingCrawlerContextConfiguration conf,
-            FollowingFrontierProducer followingFrontierProducer,
-            UserRepository userRepository,
-            CrawledUserRepository crawledUserRepository)
+            UserFrontierProducer userFrontierProducer,
+            CrawledUserRepository crawledUserRepository,
+            FollowingTransactionProducer followingTransactionProducer)
             throws TwitterException{
-        this.followingFrontierProducer = followingFrontierProducer;
-        this.userRepository = userRepository;
+        this.userFrontierProducer = userFrontierProducer;
         this.crawledUserRepository = crawledUserRepository;
+        this.followingTransactionProducer = followingTransactionProducer;
 
         //Instantiate a re-usable and thread-safe factory
         TwitterFactory twitterFactory = new TwitterFactory();
@@ -57,28 +59,18 @@ public class TwitterFollowingCrawler {
 
         boolean retry;
         int secondsUntilReset;
+        CrawledUser crawledUser = null;
 
         try {
-            CrawledUser crawledUser = crawledUserRepository.findOne(TwitterId);
+            crawledUser = crawledUserRepository.findOne(TwitterId);
             crawledUser.setLastFollowingCrawl(new java.sql.Date(new Date().getTime()));
-            crawledUser.setStatus(2);
+            crawledUser.setFollowingcrawlstatus(Crawler.CRAWLING_RUN);
             crawledUserRepository.save(crawledUser);
 
-            domain.User currentUser = userRepository.findByTwitterId(TwitterId);
-            if (currentUser == null){
-                // Get information of the user --> insert into the DB
-                User currentTwitterUser = null;
-                //currentTwitterUser = twitter.showUser(TwitterId);
-
-                currentUser = new domain.User(TwitterId);
-                this.userRepository.save(currentUser);
-                currentUser = this.userRepository.findByTwitterId(TwitterId);
-            }
-
-            LOGGER.info("Start gathering following of the user ", currentUser);
+            LOGGER.info("Start gathering following of the user '{}'", TwitterId);
             long cursor = -1;
-            int checkSumFollowing = 0;
             IDs followed = null;
+            String followingCrawled = "";
             // Iterate over the followers
             do {
                 do{
@@ -98,42 +90,22 @@ public class TwitterFollowingCrawler {
                     }
                 }while (retry);
 
-                domain.User userFollowed;
-
-                long[] followers = followed.getIDs();
-                LOGGER.info("twitter-id='{}' - found '{}' followers", TwitterId, followers.length);
-                for (long followedId: followers){
-
-                    checkSumFollowing ++;
-
-                    // Get information of the user --> insert into the DB
-                    // twitterUserFollowed = twitter.showUser(followedId);
-
-                    userFollowed = userRepository.findByTwitterId(followedId);
-                    if (userFollowed == null){
-                        userFollowed = new domain.User(
-                                followedId);
-                        this.userRepository.save(userFollowed);
-                        userFollowed = this.userRepository.findByTwitterId(followedId);
-                    }
-                    LOGGER.info("'{}' has following '{}'", TwitterId, userFollowed);
-                    currentUser.follow(userFollowed);
-
-                    LOGGER.info("'{}' vs '{}'", checkSumFollowing, currentUser.follows.size());
-                    if (currentUser.follows.size() != checkSumFollowing){
-                        LOGGER.error("Something wrong with cursor '{}' : twitter Id '{}'", cursor, TwitterId);
-                        break;
-                    }
+                for (long f: followed.getIDs()){
+                    followingCrawled+=f+",";
 
                     // Adding the user found to the FRONTIER
-                    LOGGER.debug("Add twitter user id into the frontier, with twitter-id='{}'", followedId);
-                    followingFrontierProducer.send("" + followedId);
+                    LOGGER.debug("Add twitter user id into the frontier, with twitter-id='{}'", TwitterId);
+                    userFrontierProducer.send("" + f);
                 }
             } while ((cursor = followed.getNextCursor()) != 0);
 
-            // Saving the crawled user
-            this.userRepository.save(currentUser);
-            crawledUser.setStatus(0);
+            crawledUser.setFollowingcrawlstatus(Crawler.CRAWLING_END);
+            crawledUser.setFollowingcrawled(followingCrawled);
+            crawledUserRepository.save(crawledUser);
+
+            // Send request to syinchronize the social graph microservice
+            followingTransactionProducer.send(TwitterId+","+followingCrawled);
+            crawledUser.setFollowingcrawlstatus(Crawler.SYNC_INIT);
             crawledUserRepository.save(crawledUser);
         } catch (TwitterException te){
             te.printStackTrace();
