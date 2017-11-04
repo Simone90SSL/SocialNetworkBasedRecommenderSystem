@@ -18,7 +18,6 @@ public class TwitterUserCrawler {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(UserFrontierConsumer.class);
 
-    private UserFrontierProducer userFrontierProducer;
     private CrawledUserRepository crawledUserRepository;
     private UserTransactionProducer userTransactionProducer;
     private Twitter twitter;
@@ -26,11 +25,9 @@ public class TwitterUserCrawler {
 
     public TwitterUserCrawler(
             UserCrawlerContextConfiguration conf,
-            UserFrontierProducer userFrontierProducer,
             CrawledUserRepository crawledUserRepository,
             UserTransactionProducer userTransactionProducer)
             throws TwitterException{
-        this.userFrontierProducer = userFrontierProducer;
         this.crawledUserRepository = crawledUserRepository;
         this.userTransactionProducer = userTransactionProducer;
 

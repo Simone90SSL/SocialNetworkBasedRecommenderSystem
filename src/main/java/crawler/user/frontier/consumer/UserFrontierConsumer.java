@@ -3,6 +3,7 @@ package crawler.user.frontier.consumer;
 import crawler.Crawler;
 import crawler.TwitterCralwerFactory;
 import crawler.following.frontier.producer.FollowingFrontierProducer;
+import crawler.tweets.producer.TweetsFrontierProducer;
 import crawler.user.frontier.UserCrawlerContextConfiguration;
 import crawler.user.frontier.TwitterUserCrawler;
 import crawler.user.frontier.producer.UserFrontierProducer;
@@ -31,6 +32,8 @@ public class UserFrontierConsumer {
     private UserFrontierProducer userFrontierProducer;
     @Autowired
     private FollowingFrontierProducer followingFrontierProducer;
+    @Autowired
+    private TweetsFrontierProducer tweetsFrontierProducer;
 
     @Autowired
     private CrawledUserRepository crawledUserRepository;
@@ -44,6 +47,8 @@ public class UserFrontierConsumer {
 
         // Trigger FOLLOWING crawling
         followingFrontierProducer.send(TwitterId);
+        // Trigger TWEETS crawling
+        tweetsFrontierProducer.send(TwitterId);
 
         // Check that twitter user is not present, or it has been crawled at least 24h ago
         CrawledUser crawledUser = crawledUserRepository.findOne(Long.parseLong(TwitterId));
@@ -76,7 +81,6 @@ public class UserFrontierConsumer {
         try {
             TwitterUserCrawler twitterUserCrawler = TwitterCralwerFactory.getTwitterUserCrawler(
                     userCrawlerContextConfiguration,
-                    userFrontierProducer,
                     crawledUserRepository,
                     userTransactionProducer);
             twitterUserCrawler.crawlUserByTwitterUserId(Long.parseLong(TwitterId));

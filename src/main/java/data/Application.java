@@ -1,6 +1,7 @@
 package data;
 
 import crawler.Crawler;
+import crawler.tweets.producer.TweetsFrontierProducer;
 import domain.CrawledUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,7 @@ public class Application {
     private CrawledUserRepository cr;
 
     @Autowired
-    private UserTransactionProducer utp;
+    private TweetsFrontierProducer tfp;
 
     @Bean
     public CommandLineRunner commandLineRunner(ApplicationContext ctx) {

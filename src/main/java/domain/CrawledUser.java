@@ -35,6 +35,12 @@ public class CrawledUser {
     @Column(name = "usercrawled")
     private String usercrawled;
 
+    @Column(name = "tweetscrawlstatus")
+    private int tweetscrawlstatus;
+
+    @Column(name = "tweetscrawled")
+    private String tweetscrawled;
+
 
     public CrawledUser(){}
 
@@ -71,6 +77,14 @@ public class CrawledUser {
         return usercrawled;
     }
 
+    public int getTweetscrawlstatus() {
+        return tweetscrawlstatus;
+    }
+
+    public String getTweetscrawled() {
+        return tweetscrawled;
+    }
+
     public void setFollowingcrawlstatus(int followingcrawlstatus) {
         this.followingcrawlstatus = followingcrawlstatus;
     }
@@ -101,6 +115,14 @@ public class CrawledUser {
 
     public void setUsercrawled(String usercrawled) {
         this.usercrawled = usercrawled;
+    }
+
+    public void setTweetscrawlstatus(int tweetscrawlstatus) {
+        this.tweetscrawlstatus = tweetscrawlstatus;
+    }
+
+    public void setTweetscrawled(String tweetscrawled) {
+        this.tweetscrawled = tweetscrawled;
     }
 }
 
