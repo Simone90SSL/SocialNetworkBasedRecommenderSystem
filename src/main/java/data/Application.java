@@ -1,7 +1,10 @@
 package data;
 
-import crawler.Crawler;
-import crawler.tweets.producer.TweetsFrontierProducer;
+import crawler.TwitterCralwerFactory;
+import crawler.tweets.TweetsCrawlerContextConfiguration;
+import crawler.tweets.TwitterTweetsCrawler;
+import crawler.user.frontier.TwitterUserCrawler;
+import crawler.user.frontier.UserCrawlerContextConfiguration;
 import domain.CrawledUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +17,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import repository.postgresql.CrawledUserRepository;
+import transaction.tweets.producer.TweetsTransactionProducer;
 import transaction.user.producer.UserTransactionProducer;
 
 import java.util.Arrays;
@@ -38,7 +43,11 @@ public class Application {
     private CrawledUserRepository cr;
 
     @Autowired
-    private TweetsFrontierProducer tfp;
+    TweetsCrawlerContextConfiguration conf;
+    @Autowired
+    CrawledUserRepository crawledUserRepository;
+    @Autowired
+    TweetsTransactionProducer tweetsTransactionProducer;
 
     @Bean
     public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
@@ -48,6 +57,14 @@ public class Application {
             Arrays.sort(beanNames);
             for (String beanName : beanNames) {
                 System.out.println(beanName);
+            }
+
+            TwitterTweetsCrawler tuc = TwitterCralwerFactory.getTwitterTweetsCrawler(
+                    conf, crawledUserRepository, tweetsTransactionProducer
+            );
+
+            for(CrawledUser c: cr.findByTweetscrawlstatus(4)){
+                tweetsTransactionProducer.send(c);
             }
         };
     }

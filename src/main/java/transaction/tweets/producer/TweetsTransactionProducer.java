@@ -1,10 +1,13 @@
 package transaction.tweets.producer;
 
+import crawler.Crawler;
+import domain.CrawledUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import repository.postgresql.CrawledUserRepository;
 
 @Component
 public class TweetsTransactionProducer {
@@ -14,8 +17,20 @@ public class TweetsTransactionProducer {
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    public void send(String payload) {
-        LOGGER.debug("sending follower id='{}' to topic='tweetstransactiona'", payload);
-        kafkaTemplate.send("tweetstransactiona", payload);
+    @Autowired
+    private CrawledUserRepository crawledUserRepository;
+
+    public void send(CrawledUser crawledUser) {
+        LOGGER.info("sending tweets of user id='{}' to topic='tweetstransactiona'", crawledUser.getTwitterID());
+
+        String tweets = crawledUser.getTweetscrawled();
+        if (tweets == null || tweets.isEmpty() || "[]".equals(crawledUser.getTweetscrawled())){
+            crawledUser.setTweetscrawlstatus(Crawler.NOTHING_TO_SYNC);
+        } else{
+            crawledUser.setTweetscrawlstatus(Crawler.SYNC_INIT);
+            String payload = crawledUser.getTwitterID()+":"+crawledUser.getTweetscrawled();
+            kafkaTemplate.send("tweetstransactiona", payload);
+        }
+        crawledUserRepository.save(crawledUser);
     }
 }

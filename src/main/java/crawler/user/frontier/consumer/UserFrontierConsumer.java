@@ -67,10 +67,10 @@ public class UserFrontierConsumer {
                 return;
             }
 
-            if(crawledUser.getUsercrawlstatus() != Crawler.SYNC_TERMINATED){
-                LOGGER.info("User with twitter-id='{}' is in a state that cannot be crawled --> exit", TwitterId);
-                return;
-            }
+            //if(crawledUser.getUsercrawlstatus() != Crawler.SYNC_TERMINATED){
+            //    LOGGER.info("User with twitter-id='{}' is in a state that cannot be crawled --> exit", TwitterId);
+            //    return;
+            //}
         }
 
         crawledUser.setUsercrawlstatus(Crawler.CRAWLING_WAITING);
@@ -83,7 +83,7 @@ public class UserFrontierConsumer {
                     userCrawlerContextConfiguration,
                     crawledUserRepository,
                     userTransactionProducer);
-            twitterUserCrawler.crawlUserByTwitterUserId(Long.parseLong(TwitterId));
+            twitterUserCrawler.crawlUser(crawledUser);
         } catch (TwitterException te){
             te.printStackTrace();
         }

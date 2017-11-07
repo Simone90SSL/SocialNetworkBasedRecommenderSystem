@@ -47,13 +47,27 @@ public class TweetsFrontierConsumer {
             // User is in the DB --> check if it must be crawled
             long diff = (new Date()).getTime() - crawledUser.getLastTweetsCrawl().getTime();
 
-            if (TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS) <= 7){
+            if (TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS) <= 1){
                 LOGGER.info("Tweets of user with twitter-id='{}' has recently been crawled --> SKIP IT", TwitterId);
                 return;
             }
 
-            if(crawledUser.getTweetscrawlstatus() != Crawler.SYNC_TERMINATED){
-                LOGGER.info("Tweets of the User with twitter-id='{}' cannot be crawled --> exit", TwitterId);
+            String lastTweetsCrawled = crawledUser.getTweetscrawled();
+            if ( lastTweetsCrawled != null
+                    && !lastTweetsCrawled.isEmpty()
+                    && !"[]".equals(lastTweetsCrawled)
+                    && crawledUser.getTweetscrawlstatus() != Crawler.SYNC_TERMINATED){
+                // Before starting new crawl, need to sinc old tweets
+                LOGGER.info("Tweets of the User with twitter-id='{}' must be synchronized --> exit", TwitterId);
+
+                if (crawledUser.getTweetscrawlstatus() == Crawler.SYNC_INIT){
+                    // Make a Request of sync.
+                    tweetsTransactionProducer.send(crawledUser);
+                } else{
+                    // Request of sync already sent. Just wait
+                    LOGGER.info("TWEETS-SYNC already requested for the User with twitter-id='{}' --> exit", TwitterId);
+                }
+
                 return;
             }
         }
@@ -68,7 +82,7 @@ public class TweetsFrontierConsumer {
                     tweetsCrawlerContextConfiguration,
                     crawledUserRepository,
                     tweetsTransactionProducer);
-            twitterTweetsCrawler.crawlTweetsByTwitterUserId(Long.parseLong(TwitterId));
+            twitterTweetsCrawler.crawlTweets(crawledUser);
         } catch (TwitterException te){
             te.printStackTrace();
         }

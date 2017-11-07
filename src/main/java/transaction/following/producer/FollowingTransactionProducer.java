@@ -15,7 +15,7 @@ public class FollowingTransactionProducer {
     private KafkaTemplate<String, String> kafkaTemplate;
 
     public void send(String payload) {
-        LOGGER.debug("sending follower id='{}' to topic='followingtransactiona'", payload);
+        LOGGER.info("sending follower id='{}' to topic='followingtransactiona'", payload);
         kafkaTemplate.send("followingtransactiona", payload);
     }
 }

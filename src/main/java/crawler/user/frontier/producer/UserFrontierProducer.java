@@ -15,7 +15,7 @@ public class UserFrontierProducer {
     private KafkaTemplate<String, String> kafkaTemplate;
 
     public void send(String payload) {
-        LOGGER.info("sending follower id='{}' to topic='userfrontier'", payload);
+        LOGGER.info("sending twitter id='{}' to topic='userfrontier'", payload);
         kafkaTemplate.send("userfrontier", payload);
     }
 }

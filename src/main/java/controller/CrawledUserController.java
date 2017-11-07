@@ -3,6 +3,7 @@ package controller;
 import domain.CrawledUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,10 +30,10 @@ public class CrawledUserController {
     }
 
     @RequestMapping(produces = MediaType.APPLICATION_JSON_UTF8_VALUE, value = "/crawledusers", method = GET)
-    public List<CrawledUser> getCrawledUsers(){
-        ArrayList<CrawledUser> crawledUsers = new ArrayList<>();
+    public List<Long> getCrawledUsers(){
+        ArrayList<Long> crawledUsers = new ArrayList<>();
         for (CrawledUser cu: crawledUserRepository.findAll()){
-            crawledUsers.add(cu);
+            crawledUsers.add(cu.getTwitterID());
         }
         return crawledUsers;
     }

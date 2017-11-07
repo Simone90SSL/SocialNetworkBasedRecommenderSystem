@@ -56,10 +56,10 @@ public class FollowingFrontierConsumer {
                 return;
             }
 
-            if(crawledUser.getFollowingcrawlstatus() != Crawler.SYNC_TERMINATED){
-                LOGGER.info("User with twitter-id='{}' is in a state that cannot be crawled --> exit", TwitterId);
-                return;
-            }
+            //if(crawledUser.getFollowingcrawlstatus() != Crawler.SYNC_TERMINATED){
+            //    LOGGER.info("User with twitter-id='{}' is in a state that cannot be crawled --> exit", TwitterId);
+            //    return;
+            //}
         }
 
         crawledUser.setFollowingcrawlstatus(Crawler.CRAWLING_WAITING);

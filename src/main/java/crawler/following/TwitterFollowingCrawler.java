@@ -19,7 +19,7 @@ import java.util.Date;
 
 public class TwitterFollowingCrawler {
 
-    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(FollowingFrontierConsumer.class);
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(TwitterFollowingCrawler.class);
 
     private UserFrontierProducer userFrontierProducer;
     private CrawledUserRepository crawledUserRepository;
@@ -58,6 +58,7 @@ public class TwitterFollowingCrawler {
     public synchronized void crawlFollowedByTwitterUserId(long TwitterId){
 
         boolean retry;
+        int number_retry = 0;
         int secondsUntilReset;
         CrawledUser crawledUser = null;
 
@@ -78,8 +79,9 @@ public class TwitterFollowingCrawler {
                         followed = twitter.getFriendsIDs(TwitterId, cursor);
                         retry = false;
                     } catch (TwitterException te){
-                        if (te.getStatusCode() == 429){
+                        if (te.getStatusCode() == 429 && number_retry < Crawler.MAX_RETRY){
                             retry = true;
+                            number_retry++;
                             secondsUntilReset = te.getRateLimitStatus().getSecondsUntilReset();
                             LOGGER.info("Twitter Exception caused by 'Rate limit exceeded' --> must wait '{}' secs", secondsUntilReset);
                             Thread.sleep(secondsUntilReset*1000);
@@ -94,7 +96,7 @@ public class TwitterFollowingCrawler {
                     followingCrawled+=f+",";
 
                     // Adding the user found to the FRONTIER
-                    LOGGER.debug("Add twitter user id into the frontier, with twitter-id='{}'", TwitterId);
+                    LOGGER.debug("Add twitter user id into the frontier, with twitter-id='{}'", f);
                     userFrontierProducer.send("" + f);
                 }
             } while ((cursor = followed.getNextCursor()) != 0);
@@ -107,10 +109,22 @@ public class TwitterFollowingCrawler {
             followingTransactionProducer.send(TwitterId+","+followingCrawled);
             crawledUser.setFollowingcrawlstatus(Crawler.SYNC_INIT);
             crawledUserRepository.save(crawledUser);
+            return;
         } catch (TwitterException te){
+            LOGGER.error("Twitter4J Error during twitter following crawling with input '{}'", TwitterId);
+            LOGGER.error(te.getMessage(), te);
             te.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ie) {
+            LOGGER.error("Interrupted Error during twitter following crawling with input '{}'", TwitterId);
+            LOGGER.error(ie.getMessage(), ie);
+            ie.printStackTrace();
+        } catch (Exception e){
+            LOGGER.error("Error during twitter following crawling with input '{}'", TwitterId);
+            LOGGER.error(e.getMessage(), e);
             e.printStackTrace();
         }
+
+        crawledUser.setFollowingcrawlstatus(Crawler.CRAWLING_ERROR);
+        crawledUserRepository.save(crawledUser);
     }
 }

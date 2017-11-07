@@ -49,32 +49,39 @@ public class TwitterTweetsCrawler {
         }
     }
 
-    public synchronized void crawlTweetsByTwitterUserId(long TwitterId){
+    public synchronized void crawlTweets(CrawledUser crawledUser){
 
         boolean retry;
+        int number_retry = 0;
         int secondsUntilReset;
-        CrawledUser crawledUser = null;
 
         try {
-            crawledUser = crawledUserRepository.findOne(TwitterId);
             crawledUser.setLastTweetsCrawl(new java.sql.Date(new Date().getTime()));
             crawledUser.setTweetscrawlstatus(Crawler.CRAWLING_RUN);
             crawledUserRepository.save(crawledUser);
 
-            LOGGER.info("Start gathering tweets of the user '{}'", TwitterId);
+            LOGGER.info("Start gathering tweets of the user '{}'", crawledUser.getTwitterID());
             List<Status> statuses = null;
             do{
                 try {
                     Paging paging = new Paging(1, 200);
-                    statuses = twitter.getUserTimeline(TwitterId, paging);
+                    statuses = twitter.getUserTimeline(crawledUser.getTwitterID(), paging);
                     retry = false;
                 } catch (TwitterException te){
-                    if (te.getStatusCode() == 429 || te.getStatusCode() == 401){
+                    if (te.getStatusCode() == 429
+                            && number_retry < Crawler.MAX_RETRY){
                         retry = true;
+                        number_retry++;
                         secondsUntilReset = te.getRateLimitStatus().getSecondsUntilReset();
                         LOGGER.info("Twitter Exception caused by 'Rate limit exceeded' --> must wait '{}' secs", secondsUntilReset);
                         Thread.sleep(secondsUntilReset*1000);
                         LOGGER.info("WAKE UP and RETRY");
+                    } else if(te.getStatusCode() == 404 || te.getStatusCode() == 401){
+                        // The URI requested is invalid or the resource requested, such as a user, does not exists.
+                        // Also returned when the requested format is not supported by the requested method.
+                        crawledUser.setTweetscrawlstatus(Crawler.CRAWLING_NOT_FOUND);
+                        crawledUserRepository.save(crawledUser);
+                        return;
                     } else{
                         throw te;
                     }
@@ -110,17 +117,23 @@ public class TwitterTweetsCrawler {
             crawledUser.setTweetscrawlstatus(Crawler.CRAWLING_END);
             crawledUser.setTweetscrawled(twitterTweetsJSON);
             crawledUserRepository.save(crawledUser);
-
-            //TODO Send request to synchronize the user information to social graph microservice
-            //LOGGER.debug("Init transaction for user information '{}'", TwitterId);
-
-            //tweetsTransactionProducer.send(TwitterId+":");
-            //crawledUser.setUsercrawlstatus(Crawler.SYNC_INIT);
-            //crawledUserRepository.save(crawledUser);
+            tweetsTransactionProducer.send(crawledUser);
+            return;
         } catch (TwitterException te){
+            LOGGER.error("Twitter4J Error during twitter TWEETS crawling with input '{}'", crawledUser.getTwitterID());
+            LOGGER.error(te.getMessage(), te);
             te.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ie) {
+            LOGGER.error("Interrupted Error during twitter TWEETS crawling with input '{}'", crawledUser.getTwitterID());
+            LOGGER.error(ie.getMessage(), ie);
+            ie.printStackTrace();
+        } catch (Exception e){
+            LOGGER.error("Error during twitter TWEETS crawling with input '{}'", crawledUser.getTwitterID());
+            LOGGER.error(e.getMessage(), e);
             e.printStackTrace();
         }
+
+        crawledUser.setTweetscrawlstatus(Crawler.CRAWLING_ERROR);
+        crawledUserRepository.save(crawledUser);
     }
 }

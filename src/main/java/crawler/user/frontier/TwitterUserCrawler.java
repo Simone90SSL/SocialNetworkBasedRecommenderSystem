@@ -16,7 +16,7 @@ import java.util.Optional;
 
 public class TwitterUserCrawler {
 
-    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(UserFrontierConsumer.class);
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(TwitterUserCrawler.class);
 
     private CrawledUserRepository crawledUserRepository;
     private UserTransactionProducer userTransactionProducer;
@@ -49,31 +49,38 @@ public class TwitterUserCrawler {
         }
     }
 
-    public synchronized void crawlUserByTwitterUserId(long TwitterId){
+    public synchronized void crawlUser(CrawledUser crawledUser){
 
-        boolean retry;
+        boolean retry = false;
+        int number_retry = 0;
         int secondsUntilReset;
-        CrawledUser crawledUser = null;
 
         try {
-            crawledUser = crawledUserRepository.findOne(TwitterId);
             crawledUser.setLastUserCrawl(new java.sql.Date(new Date().getTime()));
             crawledUser.setUsercrawlstatus(Crawler.CRAWLING_RUN);
             crawledUserRepository.save(crawledUser);
 
-            LOGGER.info("Start gathering information of the user '{}'", TwitterId);
+            LOGGER.info("Start gathering information of the user '{}'", crawledUser.getTwitterID());
             User currentTwitterUser = null;
             do{
                 try {
-                    currentTwitterUser = twitter.showUser(TwitterId);
+                    currentTwitterUser = twitter.showUser(crawledUser.getTwitterID());
                     retry = false;
                 } catch (TwitterException te){
-                    if (te.getStatusCode() == 429){
+                    if (( te.getStatusCode() == 429 || te.getStatusCode() == 403 )
+                            && number_retry < Crawler.MAX_RETRY){
                         retry = true;
+                        number_retry++;
                         secondsUntilReset = te.getRateLimitStatus().getSecondsUntilReset();
                         LOGGER.info("Twitter Exception caused by 'Rate limit exceeded' --> must wait '{}' secs", secondsUntilReset);
                         Thread.sleep(secondsUntilReset*1000);
                         LOGGER.info("WAKE UP and RETRY");
+                    } else if(te.getStatusCode() == 404){
+                        // The URI requested is invalid or the resource requested, such as a user, does not exists.
+                        // Also returned when the requested format is not supported by the requested method.
+                        crawledUser.setUsercrawlstatus(Crawler.CRAWLING_NOT_FOUND);
+                        crawledUserRepository.save(crawledUser);
+                        return;
                     } else{
                         throw te;
                     }
@@ -95,15 +102,25 @@ public class TwitterUserCrawler {
             crawledUserRepository.save(crawledUser);
 
             // Send request to synchronize the user information to social graph microservice
-            LOGGER.debug("Init transaction for user information '{}'", TwitterId);
+            LOGGER.debug("Init transaction for user information '{}'", crawledUser.getTwitterID());
 
-            userTransactionProducer.send(TwitterId+":"+twitterUserJSON);
-            crawledUser.setUsercrawlstatus(Crawler.SYNC_INIT);
-            crawledUserRepository.save(crawledUser);
+            userTransactionProducer.send(crawledUser);
+            return;
         } catch (TwitterException te){
+            LOGGER.error("Twitter4J Error during twitter USER crawling with input '{}'", crawledUser.getTwitterID());
+            LOGGER.error(te.getMessage(), te);
             te.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ie) {
+            LOGGER.error("Interrupted Error during twitter USER crawling with input '{}'", crawledUser.getTwitterID());
+            LOGGER.error(ie.getMessage(), ie);
+            ie.printStackTrace();
+        } catch (Exception e){
+            LOGGER.error("Error during twitter USER crawling with input '{}'", crawledUser.getTwitterID());
+            LOGGER.error(e.getMessage(), e);
             e.printStackTrace();
         }
+
+        crawledUser.setUsercrawlstatus(Crawler.CRAWLING_ERROR);
+        crawledUserRepository.save(crawledUser);
     }
 }

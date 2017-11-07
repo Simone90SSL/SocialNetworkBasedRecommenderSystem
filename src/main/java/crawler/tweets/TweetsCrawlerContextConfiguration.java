@@ -8,16 +8,16 @@ import org.springframework.stereotype.Component;
 @PropertySource(value = "classpath:application.properties")
 public class TweetsCrawlerContextConfiguration {
 
-    @Value("${consumerKey}")
+    @Value("${crawl.tweets.consumerKey}")
     private String consumerKey;
 
-    @Value("${consumerSecret}")
+    @Value("${crawl.tweets.consumerSecret}")
     private String consumerSecret;
 
-    @Value("${accessToken}")
+    @Value("${crawl.tweets.accessToken}")
     private String accessToken;
 
-    @Value("${accessTokenSecret}")
+    @Value("${crawl.tweets.accessTokenSecret}")
     private String accessTokenSecret;
 
     public String getConsumerKey() {
