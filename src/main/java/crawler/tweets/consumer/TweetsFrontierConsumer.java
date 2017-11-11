@@ -1,9 +1,10 @@
 package crawler.tweets.consumer;
 
-import crawler.Crawler;
 import crawler.TwitterCralwerFactory;
+import crawler.TwitterCrawler;
 import crawler.tweets.TwitterTweetsCrawler;
 import crawler.tweets.TweetsCrawlerContextConfiguration;
+import crawler.tweets.producer.TweetsFrontierProducer;
 import domain.CrawledUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,9 @@ public class TweetsFrontierConsumer {
     @Autowired
     private TweetsTransactionProducer tweetsTransactionProducer;
 
+    @Autowired
+    private TweetsFrontierProducer tweetsFrontierProducer;
+
     @KafkaListener(topics = "${kafka.topic.tweetsfrontier}")
     public void receive(String TwitterId) {
         LOGGER.info("Getting twitter from the frontier with twitter-id='{}'", TwitterId);
@@ -56,11 +60,11 @@ public class TweetsFrontierConsumer {
             if ( lastTweetsCrawled != null
                     && !lastTweetsCrawled.isEmpty()
                     && !"[]".equals(lastTweetsCrawled)
-                    && crawledUser.getTweetscrawlstatus() != Crawler.SYNC_TERMINATED){
+                    && crawledUser.getTweetscrawlstatus() != TwitterCrawler.SYNC_TERMINATED){
                 // Before starting new crawl, need to sinc old tweets
                 LOGGER.info("Tweets of the User with twitter-id='{}' must be synchronized --> exit", TwitterId);
 
-                if (crawledUser.getTweetscrawlstatus() == Crawler.SYNC_INIT){
+                if (crawledUser.getTweetscrawlstatus() == TwitterCrawler.SYNC_INIT){
                     // Make a Request of sync.
                     tweetsTransactionProducer.send(crawledUser);
                 } else{
@@ -72,7 +76,7 @@ public class TweetsFrontierConsumer {
             }
         }
 
-        crawledUser.setUsercrawlstatus(Crawler.CRAWLING_WAITING);
+        crawledUser.setUsercrawlstatus(TwitterCrawler.CRAWLING_WAITING);
         crawledUserRepository.save(crawledUser);
 
         // User must be crawled
@@ -81,7 +85,8 @@ public class TweetsFrontierConsumer {
             TwitterTweetsCrawler twitterTweetsCrawler = TwitterCralwerFactory.getTwitterTweetsCrawler(
                     tweetsCrawlerContextConfiguration,
                     crawledUserRepository,
-                    tweetsTransactionProducer);
+                    tweetsTransactionProducer,
+                    tweetsFrontierProducer);
             twitterTweetsCrawler.crawlTweets(crawledUser);
         } catch (TwitterException te){
             te.printStackTrace();

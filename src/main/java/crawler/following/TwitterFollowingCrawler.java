@@ -1,8 +1,6 @@
 package crawler.following;
 
-import crawler.Crawler;
-import crawler.following.frontier.consumer.FollowingFrontierConsumer;
-import crawler.following.frontier.producer.FollowingFrontierProducer;
+import crawler.TwitterCrawler;
 import crawler.user.frontier.producer.UserFrontierProducer;
 import domain.CrawledUser;
 import org.slf4j.LoggerFactory;
@@ -17,42 +15,24 @@ import twitter4j.auth.AccessToken;
 
 import java.util.Date;
 
-public class TwitterFollowingCrawler {
+public class TwitterFollowingCrawler extends TwitterCrawler {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(TwitterFollowingCrawler.class);
 
     private UserFrontierProducer userFrontierProducer;
     private CrawledUserRepository crawledUserRepository;
     private FollowingTransactionProducer followingTransactionProducer;
-    private Twitter twitter;
-
 
     public TwitterFollowingCrawler(
-            FollowingCrawlerContextConfiguration conf,
+            FollowingCrawlerContextConfiguration followingCrawlerContextConfiguration,
             UserFrontierProducer userFrontierProducer,
             CrawledUserRepository crawledUserRepository,
             FollowingTransactionProducer followingTransactionProducer)
             throws TwitterException{
+        super(followingCrawlerContextConfiguration);
         this.userFrontierProducer = userFrontierProducer;
         this.crawledUserRepository = crawledUserRepository;
         this.followingTransactionProducer = followingTransactionProducer;
-
-        //Instantiate a re-usable and thread-safe factory
-        TwitterFactory twitterFactory = new TwitterFactory();
-
-        //Instantiate a new Twitter instance
-        twitter = twitterFactory.getInstance();
-
-        //setup OAuth Consumer Credentials
-        twitter.setOAuthConsumer(conf.getConsumerKey(), conf.getConsumerSecret());
-
-        //setup OAuth Access Token
-        twitter.setOAuthAccessToken(new AccessToken(conf.getAccessToken(), conf.getAccessTokenSecret()));
-
-        User u = twitter.verifyCredentials();
-        if (u == null){
-            throw new RuntimeException("Impossible to access on Twitter");
-        }
     }
 
     public synchronized void crawlFollowedByTwitterUserId(long TwitterId){
@@ -65,7 +45,7 @@ public class TwitterFollowingCrawler {
         try {
             crawledUser = crawledUserRepository.findOne(TwitterId);
             crawledUser.setLastFollowingCrawl(new java.sql.Date(new Date().getTime()));
-            crawledUser.setFollowingcrawlstatus(Crawler.CRAWLING_RUN);
+            crawledUser.setFollowingcrawlstatus(TwitterCrawler.CRAWLING_RUN);
             crawledUserRepository.save(crawledUser);
 
             LOGGER.info("Start gathering following of the user '{}'", TwitterId);
@@ -79,7 +59,7 @@ public class TwitterFollowingCrawler {
                         followed = twitter.getFriendsIDs(TwitterId, cursor);
                         retry = false;
                     } catch (TwitterException te){
-                        if (te.getStatusCode() == 429 && number_retry < Crawler.MAX_RETRY){
+                        if (te.getStatusCode() == 429 && number_retry < TwitterCrawler.MAX_RETRY){
                             retry = true;
                             number_retry++;
                             secondsUntilReset = te.getRateLimitStatus().getSecondsUntilReset();
@@ -101,13 +81,13 @@ public class TwitterFollowingCrawler {
                 }
             } while ((cursor = followed.getNextCursor()) != 0);
 
-            crawledUser.setFollowingcrawlstatus(Crawler.CRAWLING_END);
+            crawledUser.setFollowingcrawlstatus(TwitterCrawler.CRAWLING_END);
             crawledUser.setFollowingcrawled(followingCrawled);
             crawledUserRepository.save(crawledUser);
 
             // Send request to syinchronize the social graph microservice
             followingTransactionProducer.send(TwitterId+","+followingCrawled);
-            crawledUser.setFollowingcrawlstatus(Crawler.SYNC_INIT);
+            crawledUser.setFollowingcrawlstatus(TwitterCrawler.SYNC_INIT);
             crawledUserRepository.save(crawledUser);
             return;
         } catch (TwitterException te){
@@ -124,7 +104,7 @@ public class TwitterFollowingCrawler {
             e.printStackTrace();
         }
 
-        crawledUser.setFollowingcrawlstatus(Crawler.CRAWLING_ERROR);
+        crawledUser.setFollowingcrawlstatus(TwitterCrawler.CRAWLING_ERROR);
         crawledUserRepository.save(crawledUser);
     }
 }

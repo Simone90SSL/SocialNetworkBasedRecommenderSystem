@@ -1,6 +1,6 @@
 package transaction.tweets.producer;
 
-import crawler.Crawler;
+import crawler.TwitterCrawler;
 import domain.CrawledUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,9 +25,9 @@ public class TweetsTransactionProducer {
 
         String tweets = crawledUser.getTweetscrawled();
         if (tweets == null || tweets.isEmpty() || "[]".equals(crawledUser.getTweetscrawled())){
-            crawledUser.setTweetscrawlstatus(Crawler.NOTHING_TO_SYNC);
+            crawledUser.setTweetscrawlstatus(TwitterCrawler.NOTHING_TO_SYNC);
         } else{
-            crawledUser.setTweetscrawlstatus(Crawler.SYNC_INIT);
+            crawledUser.setTweetscrawlstatus(TwitterCrawler.SYNC_INIT);
             String payload = crawledUser.getTwitterID()+":"+crawledUser.getTweetscrawled();
             kafkaTemplate.send("tweetstransactiona", payload);
         }

@@ -1,12 +1,13 @@
 package crawler.tweets;
 
+import crawler.CrawlerContextConfiguration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
 @Component
 @PropertySource(value = "classpath:application.properties")
-public class TweetsCrawlerContextConfiguration {
+public class TweetsCrawlerContextConfiguration implements CrawlerContextConfiguration {
 
     @Value("${crawl.tweets.consumerKey}")
     private String consumerKey;
@@ -19,6 +20,11 @@ public class TweetsCrawlerContextConfiguration {
 
     @Value("${crawl.tweets.accessTokenSecret}")
     private String accessTokenSecret;
+
+    @Override
+    public String getName() {
+        return "TweetsCrawlerContextConfiguration";
+    }
 
     public String getConsumerKey() {
         return consumerKey;

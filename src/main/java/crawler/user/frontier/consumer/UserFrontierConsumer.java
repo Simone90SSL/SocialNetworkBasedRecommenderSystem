@@ -1,7 +1,7 @@
 package crawler.user.frontier.consumer;
 
-import crawler.Crawler;
 import crawler.TwitterCralwerFactory;
+import crawler.TwitterCrawler;
 import crawler.following.frontier.producer.FollowingFrontierProducer;
 import crawler.tweets.producer.TweetsFrontierProducer;
 import crawler.user.frontier.UserCrawlerContextConfiguration;
@@ -73,7 +73,7 @@ public class UserFrontierConsumer {
             //}
         }
 
-        crawledUser.setUsercrawlstatus(Crawler.CRAWLING_WAITING);
+        crawledUser.setUsercrawlstatus(TwitterCrawler.CRAWLING_WAITING);
         crawledUserRepository.save(crawledUser);
 
         // User must be crawled

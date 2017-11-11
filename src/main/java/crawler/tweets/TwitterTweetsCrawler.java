@@ -1,6 +1,7 @@
 package crawler.tweets;
 
-import crawler.Crawler;
+import crawler.TwitterCrawler;
+import crawler.tweets.producer.TweetsFrontierProducer;
 import domain.CrawledUser;
 import org.slf4j.LoggerFactory;
 import repository.postgresql.CrawledUserRepository;
@@ -13,40 +14,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
-public class TwitterTweetsCrawler {
+public class TwitterTweetsCrawler extends TwitterCrawler {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(TwitterTweetsCrawler.class);
 
     private CrawledUserRepository crawledUserRepository;
     private TweetsTransactionProducer tweetsTransactionProducer;
-    private Twitter twitter;
-
+    private TweetsFrontierProducer tweetsFrontierProducer;
 
     public TwitterTweetsCrawler(
-            TweetsCrawlerContextConfiguration conf,
+            TweetsCrawlerContextConfiguration tweetsCrawlerContextConfiguration,
             CrawledUserRepository crawledUserRepository,
-            TweetsTransactionProducer tweetsTransactionProducer)
+            TweetsTransactionProducer tweetsTransactionProducer,
+            TweetsFrontierProducer tweetsFrontierProducer)
             throws TwitterException{
+
+        super(tweetsCrawlerContextConfiguration);
 
         this.crawledUserRepository = crawledUserRepository;
         this.tweetsTransactionProducer = tweetsTransactionProducer;
-
-        //Instantiate a re-usable and thread-safe factory
-        TwitterFactory twitterFactory = new TwitterFactory();
-
-        //Instantiate a new Twitter instance
-        twitter = twitterFactory.getInstance();
-
-        //setup OAuth Consumer Credentials
-        twitter.setOAuthConsumer(conf.getConsumerKey(), conf.getConsumerSecret());
-
-        //setup OAuth Access Token
-        twitter.setOAuthAccessToken(new AccessToken(conf.getAccessToken(), conf.getAccessTokenSecret()));
-
-        User u = twitter.verifyCredentials();
-        if (u == null){
-            throw new RuntimeException("Impossible to access on Twitter");
-        }
+        this.tweetsFrontierProducer = tweetsFrontierProducer;
     }
 
     public synchronized void crawlTweets(CrawledUser crawledUser){
@@ -57,7 +44,7 @@ public class TwitterTweetsCrawler {
 
         try {
             crawledUser.setLastTweetsCrawl(new java.sql.Date(new Date().getTime()));
-            crawledUser.setTweetscrawlstatus(Crawler.CRAWLING_RUN);
+            crawledUser.setTweetscrawlstatus(TwitterCrawler.CRAWLING_RUN);
             crawledUserRepository.save(crawledUser);
 
             LOGGER.info("Start gathering tweets of the user '{}'", crawledUser.getTwitterID());
@@ -69,7 +56,7 @@ public class TwitterTweetsCrawler {
                     retry = false;
                 } catch (TwitterException te){
                     if (te.getStatusCode() == 429
-                            && number_retry < Crawler.MAX_RETRY){
+                            && number_retry < TwitterCrawler.MAX_RETRY){
                         retry = true;
                         number_retry++;
                         secondsUntilReset = te.getRateLimitStatus().getSecondsUntilReset();
@@ -79,8 +66,14 @@ public class TwitterTweetsCrawler {
                     } else if(te.getStatusCode() == 404 || te.getStatusCode() == 401){
                         // The URI requested is invalid or the resource requested, such as a user, does not exists.
                         // Also returned when the requested format is not supported by the requested method.
-                        crawledUser.setTweetscrawlstatus(Crawler.CRAWLING_NOT_FOUND);
+                        crawledUser.setTweetscrawlstatus(TwitterCrawler.CRAWLING_NOT_FOUND);
                         crawledUserRepository.save(crawledUser);
+                        return;
+                    } else if(te.getStatusCode() == 130){
+                        // The Twitter servers are up, but overloaded with requests. Try again later.
+                        crawledUser.setTweetscrawlstatus(TwitterCrawler.CRAWLING_ERROR);
+                        crawledUserRepository.save(crawledUser);
+                        tweetsFrontierProducer.send(""+crawledUser.getTwitterID());
                         return;
                     } else{
                         throw te;
@@ -114,7 +107,7 @@ public class TwitterTweetsCrawler {
             twitterTweetsJSON += "]";
 
 
-            crawledUser.setTweetscrawlstatus(Crawler.CRAWLING_END);
+            crawledUser.setTweetscrawlstatus(TwitterCrawler.CRAWLING_END);
             crawledUser.setTweetscrawled(twitterTweetsJSON);
             crawledUserRepository.save(crawledUser);
             tweetsTransactionProducer.send(crawledUser);
@@ -133,7 +126,7 @@ public class TwitterTweetsCrawler {
             e.printStackTrace();
         }
 
-        crawledUser.setTweetscrawlstatus(Crawler.CRAWLING_ERROR);
+        crawledUser.setTweetscrawlstatus(TwitterCrawler.CRAWLING_ERROR);
         crawledUserRepository.save(crawledUser);
     }
 }

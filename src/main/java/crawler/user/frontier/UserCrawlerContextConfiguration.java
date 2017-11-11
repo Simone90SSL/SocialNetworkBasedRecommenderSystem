@@ -1,12 +1,13 @@
 package crawler.user.frontier;
 
+import crawler.CrawlerContextConfiguration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
 @Component
 @PropertySource(value = "classpath:application.properties")
-public class UserCrawlerContextConfiguration {
+public class UserCrawlerContextConfiguration implements CrawlerContextConfiguration{
 
     @Value("${consumerKey}")
     private String consumerKey;
@@ -19,6 +20,10 @@ public class UserCrawlerContextConfiguration {
 
     @Value("${accessTokenSecret}")
     private String accessTokenSecret;
+
+    public String getName(){
+        return "UserCrawlerContextConfiguration";
+    }
 
     public String getConsumerKey() {
         return consumerKey;

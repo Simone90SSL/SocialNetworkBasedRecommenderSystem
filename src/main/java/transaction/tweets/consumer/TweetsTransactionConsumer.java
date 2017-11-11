@@ -1,6 +1,6 @@
 package transaction.tweets.consumer;
 
-import crawler.Crawler;
+import crawler.TwitterCrawler;
 import domain.CrawledUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,10 +26,10 @@ public class TweetsTransactionConsumer {
 
         CrawledUser crawledUser = crawledUserRepository.findOne(TwitterId);
         if (status.equals("OK")){
-            crawledUser.setTweetscrawlstatus(Crawler.SYNC_TERMINATED);
-            //crawledUser.setFollowingcrawled("");
+            crawledUser.setTweetscrawlstatus(TwitterCrawler.SYNC_TERMINATED);
+            //crawledUser.setTweets crawled("");
         } else{
-            crawledUser.setTweetscrawlstatus(Crawler.SYNC_TERMINATED_ERR);
+            crawledUser.setTweetscrawlstatus(TwitterCrawler.SYNC_TERMINATED_ERR);
         }
 
         crawledUserRepository.save(crawledUser);
