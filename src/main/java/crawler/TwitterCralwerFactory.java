@@ -2,16 +2,16 @@ package crawler;
 
 import crawler.following.FollowingCrawlerContextConfiguration;
 import crawler.following.TwitterFollowingCrawler;
-import crawler.following.frontier.producer.FollowingFrontierProducer;
 import crawler.tweets.TweetsCrawlerContextConfiguration;
 import crawler.tweets.TwitterTweetsCrawler;
-import crawler.user.frontier.TwitterUserCrawler;
-import crawler.user.frontier.UserCrawlerContextConfiguration;
-import crawler.user.frontier.producer.UserFrontierProducer;
+import crawler.user.TwitterUserCrawler;
+import crawler.user.UserCrawlerContextConfiguration;
+import domain.CrawledDataFactory;
+import frontier.producer.FrontierProducer;
+import org.springframework.data.repository.CrudRepository;
+import repository.postgresql.CrawledFollowingRepository;
+import repository.postgresql.CrawledTweetsRepository;
 import repository.postgresql.CrawledUserRepository;
-import transaction.following.producer.FollowingTransactionProducer;
-import transaction.tweets.producer.TweetsTransactionProducer;
-import transaction.user.producer.UserTransactionProducer;
 import twitter4j.TwitterException;
 
 public class TwitterCralwerFactory {
@@ -24,19 +24,42 @@ public class TwitterCralwerFactory {
 
     }
 
+    public static TwitterCrawler getInstance(CrawledDataFactory.CRAWLED_DATA_TYPE crawledDataType,
+                                             CrawlerContextConfiguration crawlerContextConfiguration,
+                                             FrontierProducer frontierProducer,
+                                             CrudRepository crudRepository) throws TwitterException{
+
+        if (crawledDataType == CrawledDataFactory.CRAWLED_DATA_TYPE.FOLLOWING){
+            return getTwitterFollowingCrawler(
+                    (FollowingCrawlerContextConfiguration) crawlerContextConfiguration,
+                    frontierProducer,
+                    (CrawledFollowingRepository) crudRepository);
+        } else if(crawledDataType == CrawledDataFactory.CRAWLED_DATA_TYPE.TWEETS){
+            return getTwitterTweetsCrawler(
+                    (TweetsCrawlerContextConfiguration) crawlerContextConfiguration,
+                    (CrawledTweetsRepository) crudRepository,
+                    frontierProducer);
+        } else if(crawledDataType == CrawledDataFactory.CRAWLED_DATA_TYPE.USER){
+            return getTwitterUserCrawler(
+                    (UserCrawlerContextConfiguration) crawlerContextConfiguration,
+                    (CrawledUserRepository) crudRepository,
+                    frontierProducer);
+        } else{
+            throw new RuntimeException("CRAWLED DATA TYPE not found: "+crawledDataType);
+        }
+    }
+
     public static TwitterFollowingCrawler getTwitterFollowingCrawler(
             FollowingCrawlerContextConfiguration conf,
-            UserFrontierProducer userFrontierProducer,
-            CrawledUserRepository crawledUserRepository,
-            FollowingTransactionProducer followingTransactionProducer)
+            FrontierProducer frontierProducer,
+            CrawledFollowingRepository crawledFollowingRepository)
             throws TwitterException {
 
         if (twitterFollowingCrawler == null){
             twitterFollowingCrawler = new TwitterFollowingCrawler(
                     conf,
-                    userFrontierProducer,
-                    crawledUserRepository,
-                    followingTransactionProducer);
+                    frontierProducer,
+                    crawledFollowingRepository);
         }
 
         return twitterFollowingCrawler;
@@ -45,14 +68,14 @@ public class TwitterCralwerFactory {
     public static TwitterUserCrawler getTwitterUserCrawler(
             UserCrawlerContextConfiguration conf,
             CrawledUserRepository crawledUserRepository,
-            UserTransactionProducer userTransactionProducer)
+            FrontierProducer frontierProducer)
             throws TwitterException {
 
         if (twitterUserCrawler == null){
             twitterUserCrawler = new TwitterUserCrawler(
                     conf,
                     crawledUserRepository,
-                    userTransactionProducer);
+                    frontierProducer);
         }
 
         return twitterUserCrawler;
@@ -60,14 +83,14 @@ public class TwitterCralwerFactory {
 
     public static TwitterTweetsCrawler getTwitterTweetsCrawler(
             TweetsCrawlerContextConfiguration tweetsCrawlerContextConfiguration,
-            CrawledUserRepository crawledUserRepository,
-            TweetsTransactionProducer tweetsTransactionProducer) throws TwitterException {
+            CrawledTweetsRepository crawledTweetsRepository,
+            FrontierProducer frontierProducer) throws TwitterException {
 
         if (twitterTweetsCrawler == null){
             twitterTweetsCrawler = new TwitterTweetsCrawler(
                     tweetsCrawlerContextConfiguration,
-                    crawledUserRepository,
-                    tweetsTransactionProducer);
+                    crawledTweetsRepository,
+                    frontierProducer);
         }
 
         return twitterTweetsCrawler;

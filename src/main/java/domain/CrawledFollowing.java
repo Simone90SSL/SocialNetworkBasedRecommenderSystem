@@ -7,8 +7,8 @@ import javax.persistence.Table;
 import java.sql.Date;
 
 @Entity
-@Table(name = "crawleduser")
-public class CrawledUser implements CrawledData {
+@Table(name = "crawledfollowing")
+public class CrawledFollowing implements CrawledData {
 
     @Id
     @Column(name = "twitterid")
@@ -23,11 +23,12 @@ public class CrawledUser implements CrawledData {
     @Column(name = "datacrawled")
     private String datacrawled;
 
-    public CrawledUser(long TwitterID){
+
+    public CrawledFollowing(){}
+
+    public CrawledFollowing(long TwitterID){
         this.TwitterID = TwitterID;
     }
-
-    public CrawledUser(){}
 
     public long getTwitterID() {
         return TwitterID;
@@ -65,4 +66,6 @@ public class CrawledUser implements CrawledData {
     public void setDataCrawled(String dataCrawled) {
         this.datacrawled = dataCrawled;
     }
+
+
 }

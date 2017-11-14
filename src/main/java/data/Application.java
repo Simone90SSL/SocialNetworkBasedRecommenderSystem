@@ -1,11 +1,14 @@
 package data;
 
 import crawler.TwitterCralwerFactory;
+import crawler.following.FollowingCrawlerContextConfiguration;
+import crawler.following.TwitterFollowingCrawler;
 import crawler.tweets.TweetsCrawlerContextConfiguration;
 import crawler.tweets.TwitterTweetsCrawler;
-import crawler.user.frontier.TwitterUserCrawler;
-import crawler.user.frontier.UserCrawlerContextConfiguration;
-import domain.CrawledUser;
+import domain.CrawledData;
+import domain.CrawledFollowing;
+import frontier.consumer.FrontierConsumer;
+import frontier.producer.FrontierProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,11 +19,12 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
+import repository.postgresql.CrawledFollowingRepository;
+import repository.postgresql.CrawledTweetsRepository;
 import repository.postgresql.CrawledUserRepository;
-import transaction.tweets.producer.TweetsTransactionProducer;
-import transaction.user.producer.UserTransactionProducer;
 
 import java.util.Arrays;
 
@@ -28,7 +32,7 @@ import java.util.Arrays;
  * Created by simonecaldaro on 11/09/2017.
  */
 @SpringBootApplication
-@ComponentScan({"controller", "data", "crawler", "repository", "transaction"})
+@ComponentScan({"controller", "data", "crawler", "repository", "frontier"})
 @EntityScan("domain")
 @EnableJpaRepositories("repository.postgresql")
 public class Application {
@@ -40,14 +44,13 @@ public class Application {
     }
 
     @Autowired
-    private CrawledUserRepository cr;
+    private CrawledFollowingRepository crt;
 
     @Autowired
-    TweetsCrawlerContextConfiguration conf;
+    private FrontierConsumer fp;
+
     @Autowired
-    CrawledUserRepository crawledUserRepository;
-    @Autowired
-    TweetsTransactionProducer tweetsTransactionProducer;
+    private FollowingCrawlerContextConfiguration conf;
 
     @Bean
     public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
@@ -59,13 +62,21 @@ public class Application {
                 System.out.println(beanName);
             }
 
-            TwitterTweetsCrawler tuc = TwitterCralwerFactory.getTwitterTweetsCrawler(
-                    conf, crawledUserRepository, tweetsTransactionProducer
-            );
+//            TwitterFollowingCrawler tfc = TwitterCralwerFactory.getTwitterFollowingCrawler(conf, fp, crt);
+//
+//            int page = 0;
+//            int size = 100;
+//            Page<CrawledData> l = crt.findAll(new PageRequest(page++, size));
+//            while(l.hasNext()){
+//                for (CrawledData c: l){
+//                    if (c.getCrawlStatus() != 4 && c.getCrawlStatus() != 5){
+//                        tfc.crawlFollowedByTwitterUserId(c.getTwitterID());
+//                    }
+//                }
+//                l = crt.findAll(new PageRequest(page++, size));
+//            }
 
-            for(CrawledUser c: cr.findByTweetscrawlstatus(4)){
-                tweetsTransactionProducer.send(c);
-            }
+            fp.receiveFollowing("-1");
         };
     }
 }

@@ -1,4 +1,4 @@
-package crawler.user.frontier;
+package crawler.user;
 
 import crawler.CrawlerContextConfiguration;
 import org.springframework.beans.factory.annotation.Value;
