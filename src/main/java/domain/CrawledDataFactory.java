@@ -1,8 +1,8 @@
 package domain;
 
-public class CrawledDataFactory {
+import crawler.TwitterCrawler.CRAWLED_DATA_TYPE;
 
-    public enum CRAWLED_DATA_TYPE  { FOLLOWING, TWEETS, USER };
+public class CrawledDataFactory {
 
     public static CrawledData getInstance(CRAWLED_DATA_TYPE type, long twitterId){
         if (type == CRAWLED_DATA_TYPE.FOLLOWING){

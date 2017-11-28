@@ -3,7 +3,7 @@ package crawler.user;
 import crawler.TwitterCrawler;
 import domain.CrawledData;
 import domain.CrawledUser;
-import frontier.producer.FrontierProducer;
+import frontier.FrontierProducer;
 import org.slf4j.LoggerFactory;
 import repository.postgresql.CrawledUserRepository;
 import twitter4j.*;
@@ -31,7 +31,7 @@ public class TwitterUserCrawler extends TwitterCrawler {
     }
 
     @Override
-    public String startCrawl(CrawledData crawledData) throws TwitterException, InterruptedException {
+    public String retrieveData(CrawledData crawledData) throws TwitterException, InterruptedException {
 
         // Trigger crawling of FOLLOWING / TWEETS
         frontierProducer.sendFollowing(""+crawledData.getTwitterID());

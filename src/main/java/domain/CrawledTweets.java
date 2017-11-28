@@ -55,7 +55,7 @@ public class CrawledTweets implements CrawledData {
 
     @Override
     public boolean isDataCrawledEmpty() {
-        return datacrawled == null || "[]".equals(datacrawled);
+        return datacrawled == null || datacrawled.isEmpty() || "[]".equals(datacrawled);
     }
 
     public String getDataCrawled() {

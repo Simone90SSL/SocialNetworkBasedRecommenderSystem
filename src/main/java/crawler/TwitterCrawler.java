@@ -2,9 +2,6 @@ package crawler;
 
 import domain.CrawledData;
 import domain.CrawledDataFactory;
-import domain.CrawledFollowing;
-import frontier.consumer.FrontierConsumer;
-import frontier.producer.FrontierProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.repository.CrudRepository;
@@ -18,9 +15,9 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-public abstract class TwitterCrawler{
+public abstract class TwitterCrawler implements Runnable{
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FrontierConsumer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TwitterCrawler.class);
 
     public static final int CRAWLING_INIT = 0;
     public static final int CRAWLING_WAITING = 1;
@@ -34,6 +31,8 @@ public abstract class TwitterCrawler{
     public static final int NOTHING_TO_SYNC = 8;
 
     public static final int MAX_RETRY = 3;
+
+    public enum CRAWLED_DATA_TYPE  { FOLLOWING, TWEETS, USER };
 
     protected Twitter twitter;
     private String name;
@@ -76,7 +75,7 @@ public abstract class TwitterCrawler{
             }
 
             if(!crawledData.isDataCrawledEmpty() && crawledData.getCrawlStatus() == TwitterCrawler.SYNC_TERMINATED){
-                LOGGER.info("twitter-id='{}' has to sync old cralwed data", crawledData.getTwitterID());
+                LOGGER.warn("twitter-id='{}' has to sync old cralwed data", crawledData.getTwitterID());
                 return false;
             }
         }
@@ -84,9 +83,9 @@ public abstract class TwitterCrawler{
         return true;
     }
 
-    public void initCrawl(String twitterIdStr,
-                          CrawledDataFactory.CRAWLED_DATA_TYPE crawledDataType,
-                          CrudRepository crudRepository){
+    public synchronized void runCrawl(String twitterIdStr,
+                                      CRAWLED_DATA_TYPE crawledDataType,
+                                      CrudRepository crudRepository){
 
         LOGGER.info("Init crawling '{}' for twitter id '{}'", crawledDataType, twitterIdStr);
         long twitterId = Long.parseLong(twitterIdStr);
@@ -106,7 +105,7 @@ public abstract class TwitterCrawler{
         // User must be crawled
         LOGGER.info("Start crawling user with twitter-id='{}', getting the '{}'", twitterId, crawledDataType);
         try {
-            String result = startCrawl(crawledData);
+            String result = retrieveData(crawledData);
             crawledData.setCrawlStatus(TwitterCrawler.CRAWLING_END);
             crawledData.setDataCrawled(result);
             crudRepository.save(crawledData);
@@ -131,10 +130,32 @@ public abstract class TwitterCrawler{
         // If code reach this point, the crawl has terminated in error
         crawledData.setCrawlStatus(TwitterCrawler.CRAWLING_ERROR);
         crudRepository.save(crawledData);
-
     }
 
-    public abstract String startCrawl(CrawledData crawledData) throws TwitterException, InterruptedException;
+    public abstract String retrieveData(CrawledData crawledData) throws TwitterException, InterruptedException;
+
+    private static boolean compareCrawlType(String type, CRAWLED_DATA_TYPE crawledDataType){
+        return type!=null && crawledDataType.toString().toLowerCase().equals(type.toLowerCase());
+    }
+
+    public static boolean isCrawlerFollowing(String type){
+        return compareCrawlType(type, CRAWLED_DATA_TYPE.FOLLOWING);
+    }
+
+    public static boolean isCrawlerTweets(String type){
+        return compareCrawlType(type, CRAWLED_DATA_TYPE.TWEETS);
+    }
+
+    public static boolean isCrawlerUser(String type){
+        return compareCrawlType(type, CRAWLED_DATA_TYPE.USER);
+    }
+
+
+
+    @Override
+    public void run(){
+
+    }
 }
 
 

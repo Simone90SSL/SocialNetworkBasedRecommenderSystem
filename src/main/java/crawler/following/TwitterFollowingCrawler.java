@@ -1,9 +1,10 @@
 package crawler.following;
 
+import crawler.CrawlerContextConfiguration;
 import crawler.TwitterCrawler;
 import domain.CrawledData;
 import domain.CrawledFollowing;
-import frontier.producer.FrontierProducer;
+import frontier.FrontierProducer;
 import org.slf4j.LoggerFactory;
 import repository.postgresql.CrawledFollowingRepository;
 import twitter4j.IDs;
@@ -17,9 +18,18 @@ public class TwitterFollowingCrawler extends TwitterCrawler {
 
     private FrontierProducer frontierProducer;
     private CrawledFollowingRepository crawledFollowingRepository;
+    private CrawledData crawledData;
+
+    public CrawledData getCrawledData() {
+        return crawledData;
+    }
+
+    public void setCrawledData(CrawledData crawledData) {
+        this.crawledData = crawledData;
+    }
 
     public TwitterFollowingCrawler(
-            FollowingCrawlerContextConfiguration followingCrawlerContextConfiguration,
+            CrawlerContextConfiguration followingCrawlerContextConfiguration,
             FrontierProducer frontierProducer,
             CrawledFollowingRepository crawledFollowingRepository)
             throws TwitterException{
@@ -29,7 +39,7 @@ public class TwitterFollowingCrawler extends TwitterCrawler {
     }
 
     @Override
-    public String startCrawl(CrawledData crawledData) throws TwitterException, InterruptedException {
+    public String retrieveData(CrawledData crawledData) throws TwitterException, InterruptedException {
         boolean retry;
         int number_retry = 0;
         int secondsUntilReset;
@@ -65,11 +75,9 @@ public class TwitterFollowingCrawler extends TwitterCrawler {
                 }
             }while (retry);
 
-            for (long f: followed.getIDs()){
-                followingCrawled+=f+",";
-                // Adding the user found to the FRONTIER
-                LOGGER.debug("Add twitter user id into the frontier, with twitter-id='{}'", f);
-                frontierProducer.sendUser("" + f);
+            for (long followedTwitterId: followed.getIDs()){
+                followingCrawled+=followedTwitterId+",";
+                frontierProducer.sendUser("" + followedTwitterId);
             }
         } while ((cursor = followed.getNextCursor()) != 0);
         return followingCrawled;

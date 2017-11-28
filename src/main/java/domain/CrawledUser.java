@@ -55,7 +55,7 @@ public class CrawledUser implements CrawledData {
 
     @Override
     public boolean isDataCrawledEmpty() {
-        return datacrawled == null || datacrawled.isEmpty();
+        return datacrawled == null || datacrawled.isEmpty() || "{}".equals(datacrawled);
     }
 
     public String getDataCrawled() {

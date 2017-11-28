@@ -3,7 +3,7 @@ package crawler.tweets;
 import crawler.TwitterCrawler;
 import domain.CrawledData;
 import domain.CrawledTweets;
-import frontier.producer.FrontierProducer;
+import frontier.FrontierProducer;
 import org.slf4j.LoggerFactory;
 import repository.postgresql.CrawledTweetsRepository;
 import twitter4j.*;
@@ -33,7 +33,7 @@ public class TwitterTweetsCrawler extends TwitterCrawler {
     }
 
     @Override
-    public String startCrawl(CrawledData crawledData) throws TwitterException, InterruptedException {
+    public String retrieveData(CrawledData crawledData) throws TwitterException, InterruptedException {
         boolean retry;
         int number_retry = 0;
         int secondsUntilReset;

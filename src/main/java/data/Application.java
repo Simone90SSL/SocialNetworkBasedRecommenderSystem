@@ -1,30 +1,23 @@
 package data;
 
-import crawler.TwitterCralwerFactory;
 import crawler.following.FollowingCrawlerContextConfiguration;
-import crawler.following.TwitterFollowingCrawler;
-import crawler.tweets.TweetsCrawlerContextConfiguration;
-import crawler.tweets.TwitterTweetsCrawler;
-import domain.CrawledData;
-import domain.CrawledFollowing;
-import frontier.consumer.FrontierConsumer;
-import frontier.producer.FrontierProducer;
+import frontier.FrontierProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.web.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import repository.postgresql.CrawledFollowingRepository;
 import repository.postgresql.CrawledTweetsRepository;
-import repository.postgresql.CrawledUserRepository;
 
 import java.util.Arrays;
 
@@ -32,10 +25,12 @@ import java.util.Arrays;
  * Created by simonecaldaro on 11/09/2017.
  */
 @SpringBootApplication
-@ComponentScan({"controller", "data", "crawler", "repository", "frontier"})
+@ComponentScan({"controller", "data", "crawler", "repository", "frontier", "synchronization"})
 @EntityScan("domain")
 @EnableJpaRepositories("repository.postgresql")
-public class Application {
+@EnableWebMvc
+@EnableAutoConfiguration
+public class Application extends SpringBootServletInitializer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
 
@@ -44,10 +39,12 @@ public class Application {
     }
 
     @Autowired
-    private CrawledFollowingRepository crt;
+    private CrawledFollowingRepository crawledFollowingRepository;
+    @Autowired
+    private CrawledTweetsRepository crawledTweetsRepository;
 
     @Autowired
-    private FrontierConsumer fp;
+    private FrontierProducer frontierProducer;
 
     @Autowired
     private FollowingCrawlerContextConfiguration conf;
@@ -62,21 +59,24 @@ public class Application {
                 System.out.println(beanName);
             }
 
-//            TwitterFollowingCrawler tfc = TwitterCralwerFactory.getTwitterFollowingCrawler(conf, fp, crt);
-//
-//            int page = 0;
-//            int size = 100;
-//            Page<CrawledData> l = crt.findAll(new PageRequest(page++, size));
-//            while(l.hasNext()){
-//                for (CrawledData c: l){
-//                    if (c.getCrawlStatus() != 4 && c.getCrawlStatus() != 5){
-//                        tfc.crawlFollowedByTwitterUserId(c.getTwitterID());
-//                    }
-//                }
-//                l = crt.findAll(new PageRequest(page++, size));
-//            }
+            //TwitterFollowingCrawler tfc = TwitterCralwerFactory.getTwitterFollowingCrawler(conf, fp, crt);
 
-            fp.receiveFollowing("-1");
+
+
+
+            //List<Object> o = crawledTweetsRepository.getStatus();
+            //System.out.println(o);
+            /*Page<CrawledData> l = crawledFollowingRepository.findByCrawlstatus(4, new PageRequest(page, size));
+            while(l.hasNext()){
+                System.out.println("Page "+(page-1));
+                for (CrawledData c: l){
+                    if(c.getCrawlStatus() == 4) {
+                        frontierProducer.sendFollowingTransaction((CrawledFollowing) c);
+                    }
+                }
+                l = crawledFollowingRepository.findAll(new PageRequest(page++, size));
+            }*/
+
         };
     }
 }
